@@ -6,3 +6,5 @@ GroupingMdis.py:使用马氏距离对特征进行重要性加权然后均匀分�
 MVABTest.py:多元AB测试
 
 StepwiseBackReg.py:带收缩估计的后向回归
+
+NelderMead.py:为了能上numba的parallel重写的Nelder-Mead单纯形优化算法
