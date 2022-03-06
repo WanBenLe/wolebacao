@@ -15,6 +15,23 @@ PLEASE DO NOT USE FOR ACADEMIC PURPOSES
 PLEASE DO NOT USE FOR ACADEMIC PURPOSES
 PLEASE DO NOT USE FOR ACADEMIC PURPOSES
 '''
+'''
+Copyright <2021> <Ben Wan: wanbenfighting@gmail.com>
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
+persons to whom the Software is furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+PLEASE DO NOT USE FOR ACADEMIC PURPOSES
+PLEASE DO NOT USE FOR ACADEMIC PURPOSES
+PLEASE DO NOT USE FOR ACADEMIC PURPOSES
+'''
 import numpy as np
 from pickle import load
 import pandas as pd
@@ -22,6 +39,8 @@ from numpy.linalg import inv
 from numba import jit
 import time
 from numpy.random import choice
+from copy import deepcopy
+import matplotlib.pyplot as plt
 
 
 @jit(forceobj=True)
@@ -133,9 +152,11 @@ def Mdis_Group(data, group, times_all):
     # data_x预分配了内存,方便抽样,基于同样的原因该部分代码写在并行外面
     data_x = np.zeros((group * n_sample * times_all))
     set_n = [[[]] * group][0]
+    for i in range(group):
+        set_n[i] = deepcopy(set_n[i])
     # 先随机分配样本給每个组
     sample = choice(np.argwhere(data_x == 0).reshape(-1), group * n_sample, replace=False). \
-        reshape(group, n_sample).tolist()
+        reshape(group, n_sample).tolist().copy()
     for i in range(group):
         data_x[sample[i]] = i + 1
         set_n[i].extend(sample[i])
@@ -145,7 +166,7 @@ def Mdis_Group(data, group, times_all):
         Mdis_mat = np.zeros((group, group))
 
         sample = choice(np.argwhere(data_x == 0).reshape(-1), group * n_sample, replace=False). \
-            reshape(group, n_sample).tolist()
+            reshape(group, n_sample).tolist().copy()
         # 第j组样本
         for j in range(group):
             # 第k个数据集
@@ -153,8 +174,8 @@ def Mdis_Group(data, group, times_all):
                 # 因为set1,set2是动态的所以要用copy
                 # 批样本质心
                 cluster = np.mean(data[sample[j]], axis=0) - np.mean(data[data_x == k], axis=0)
-                temp1 = set_n[k].copy()
-                temp1.extend(sample[j])
+                temp1 = deepcopy(set_n[k])
+                temp1.extend(sample[j].copy())
                 Mdis_mat[j, k] = mdis(cluster, data[temp1])
         Mdis_mat = np.round(Mdis_mat, 6)
         resultx = np.zeros((group))
@@ -180,6 +201,7 @@ def absdiff(data):
     return result
 
 
+
 # 随机样本量
 alter = 10000
 # 特征数
@@ -188,13 +210,13 @@ features = 6
 group = 2
 # 抽样次数
 times_all = 10
+# 为分类样本的列
+cat = []
 # 随机生成样本
 data = np.random.randint(high=13, low=10, size=(alter, features)).astype(float)
 
-# 为分类样本的列
-cat = [3]
 
-rank_rate = [1] * features
+rank_rate = [1.2, 0.5, 0.3]
 init_index = np.arange(features).tolist()
 n_sample = int(len(data) / group / times_all) * group * times_all
 datax = data[:n_sample, :]
@@ -216,9 +238,3 @@ for i in range(group):
 emat = Edis(check_series)
 print('重要性加权标化后各组欧氏距离矩阵', emat)
 print('重要性加权标化后各组各特征欧氏距离均值', np.mean(emat, axis=1))
-
-# print(std)
-# print(inter)
-a = absdiff(result)
-print(a)
-
