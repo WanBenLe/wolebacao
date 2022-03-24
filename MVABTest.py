@@ -12,9 +12,8 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER I
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
-import numpy as np
 from numba import jit
-from numpy.linalg import inv
+from numpy.linalg import inv, pinv
 from scipy.stats import f, ranksums
 
 
@@ -31,7 +30,7 @@ def Hotelling_HT_test(X, Y):
     D = (X_bar - Y_bar).reshape(-1, 1)
 
     V = (1 / n + 1 / m) * ((m - 1) * V1 + (n - 1) * V2) / (N - 2)
-    HT = D.transpose() @ inv(V) @ D
+    HT = D.transpose() @ pinv(V) @ D
     HT_stat = (N - p - 1) / ((N - 2) * p) * HT
     HT_stat = HT_stat[0][0]
     dof1 = p
@@ -42,7 +41,7 @@ def Hotelling_HT_test(X, Y):
     return HT_stat, single_pvalue, dobule_pvalue
 
 
-@jit(forceobj=True)
+@jit()
 def Tippett_MuNonpara_test(X, Y, test_sample=5):
     '''
     Marco Marozzi, 2014. Statistical Methods in Medical Research, STATISTICAL METHODS IN MEDICAL RESEARCH
@@ -72,11 +71,14 @@ def Tippett_MuNonpara_test(X, Y, test_sample=5):
             z = z_other[np.random.choice(z_len, z_len, replace=False)]
             L2_t = (np.sum((x_first - z) ** 2, axis=1)) ** 0.5
             PJK[i, j] = ranksums(L2_t[:m], L2_t[m:]).pvalue
-        QPJK[j] = np.sum(PJK[:, j] < PJK0) / B
-    # Tippett adj
-    p = np.max(1 - QPJK)
-    return p
+    v = np.min(PJK, axis=1)
+    v1 = v[0]
+    v2 = v[1:]
 
+    TIPJK = np.argwhere(np.sort(v2) < v1)[0][0] / len(v2)
+    QMJK = np.sum(PJK[1:] < PJK[0]) / B
+    # Tippett adj
+    return [QMJK, TIPJK]
 
 # 样本量
 test_n1 = 10
@@ -84,6 +86,14 @@ test_n1 = 10
 test_n2 = 50
 X = np.random.rand(test_n1, test_n2)
 Y = np.random.rand(test_n1, test_n2)
+
+print(np.mean(X, axis=0))
+print(np.mean(Y, axis=0))
+'''
+X = X - Y
+print(X)
+Y = np.zeros((5, 2))
+'''
 # 样本量够大的时候就Hotelling,裂开来了才用下面的
 print(Hotelling_HT_test(X, Y))
-print(Tippett_MuNonpara_test(X, Y, testsample=5))
+print(Tippett_MuNonpara_test(X, Y, test_sample=8))
